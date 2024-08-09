@@ -67,7 +67,10 @@ def curses_app(stdscr: 'curses.window', root: Thing):
 
     while True:
         things_to_display = get_visible_things()
-        render()
+        try:
+            render()
+        except curses.error:
+            pass
 
         key = stdscr.getch()
 
@@ -104,8 +107,10 @@ def curses_app(stdscr: 'curses.window', root: Thing):
                     expanded_dirs.remove(selected_thing.get_path())
                 else:
                     expanded_dirs.add(selected_thing.get_path())
-
-        render()
+        try:
+            render()
+        except curses.error:
+            pass
 
 
 def save_selections(root: Thing):
