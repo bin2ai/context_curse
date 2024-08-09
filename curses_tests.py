@@ -14,20 +14,20 @@ def curses_app(stdscr: 'curses.window', root: Thing):
         """Get a list of visible things based on the expanded state."""
         visible = []
 
-        def add_visible_children(thing: Thing):
-            visible.append(thing)
+        def add_visible_children(thing: Thing, depth: int):
+            visible.append((thing, depth))
             if thing.get_path() in expanded_dirs and thing.is_directory():
                 for child in thing.get_children():
-                    add_visible_children(child)
+                    add_visible_children(child, depth + 1)
 
-        add_visible_children(current_thing)
+        add_visible_children(current_thing, 0)
         return visible
 
     def render():
         stdscr.clear()
         things_to_display = get_visible_things()
 
-        for idx, thing in enumerate(things_to_display):
+        for idx, (thing, depth) in enumerate(things_to_display):
             # highlight the selected item
             if idx == selected_index:
                 mark = ">"
@@ -48,7 +48,9 @@ def curses_app(stdscr: 'curses.window', root: Thing):
 
             color_pair = curses.color_pair(c)
             stdscr.attron(color_pair)
-            stdscr.addstr(idx, 0, f"{mark} {thing.get_path()}{suffix}")
+            # Add indentation based on the depth
+            stdscr.addstr(
+                idx, 0, f"{mark}{'    ' * depth}{thing.get_path()}{suffix}")
             stdscr.attroff(color_pair)
 
         stdscr.refresh()
@@ -75,27 +77,28 @@ def curses_app(stdscr: 'curses.window', root: Thing):
             selected_index = min(len(things_to_display) -
                                  1, selected_index + 1)
         elif key == curses.KEY_ENTER or key in [10, 13]:
-            selected_thing = things_to_display[selected_index]
+            selected_thing = things_to_display[selected_index][0]
             selected_thing.set_keep(not selected_thing.get_keep())
         elif key == ord('s'):
             save_selections(root)
         elif key == ord('q') or key == ord('Q'):
             break
         elif key == curses.KEY_RIGHT:
-            selected_thing = things_to_display[selected_index]
+            selected_thing = things_to_display[selected_index][0]
             if selected_thing.is_directory() and selected_thing.get_path() not in expanded_dirs:
                 expanded_dirs.add(selected_thing.get_path())
         elif key == curses.KEY_LEFT:
             if selected_index > 0:
-                selected_thing = things_to_display[selected_index]
+                selected_thing = things_to_display[selected_index][0]
                 if selected_thing.get_path() in expanded_dirs:
                     expanded_dirs.remove(selected_thing.get_path())
                 else:
                     parent = selected_thing.get_parent()
                     if parent:
-                        selected_index = things_to_display.index(parent)
+                        selected_index = things_to_display.index(
+                            (parent, selected_index))
         elif key == ord(' '):  # Space bar toggles expansion/collapse
-            selected_thing = things_to_display[selected_index]
+            selected_thing = things_to_display[selected_index][0]
             if selected_thing.is_directory():
                 if selected_thing.get_path() in expanded_dirs:
                     expanded_dirs.remove(selected_thing.get_path())
