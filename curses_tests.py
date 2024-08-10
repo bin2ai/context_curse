@@ -110,6 +110,17 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
     curses.init_pair(6, curses.COLOR_YELLOW,
                      curses.COLOR_WHITE)  # Selected, mixed
 
+    def confirm_action(action: str) -> bool:
+        stdscr.clear()
+        stdscr.addstr(0, 0, f"Are you sure you want to {action}? (y/n)")
+        stdscr.refresh()
+        while True:
+            key = stdscr.getch()
+            if key == ord('y'):
+                return True
+            elif key == ord('n'):
+                return False
+
     while True:
         things_to_display: List[Thing] = get_visible_things()
         try:
@@ -128,9 +139,11 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
             selected_thing: Thing = things_to_display[selected_index][0]
             selected_thing.set_keep(not selected_thing.get_keep())
         elif key == ord('s'):
-            save_selections(root, output_path)
+            if confirm_action("save"):
+                save_selections(root, output_path)
         elif key == ord('q') or key == ord('Q'):
-            break
+            if confirm_action("quit"):
+                break
         elif key == ord(' '):  # Space bar toggles expansion/collapse
             selected_thing = things_to_display[selected_index][0]
             if selected_thing.is_directory():
@@ -142,7 +155,6 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
             render()
         except curses.error:
             pass
-
 
 def save_selections(root: Thing, output_path: str):
     # Clear the file if root
