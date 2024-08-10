@@ -44,9 +44,11 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
 
     def render():
         stdscr.clear()
-        things_to_display = get_visible_things()
+        things_to_display: List[Thing] = get_visible_things()
 
         for idx, (thing, depth) in enumerate(things_to_display):
+            thing: Thing
+            depth: int
             # highlight the selected item
             if idx == selected_index:
                 mark = ">"
@@ -85,7 +87,7 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
                      curses.COLOR_WHITE)  # Selected, mixed
 
     while True:
-        things_to_display = get_visible_things()
+        things_to_display: List[Thing] = get_visible_things()
         try:
             render()
         except curses.error:
@@ -99,7 +101,7 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
             selected_index = min(len(things_to_display) -
                                  1, selected_index + 1)
         elif key == curses.KEY_ENTER or key in [10, 13]:
-            selected_thing = things_to_display[selected_index][0]
+            selected_thing: Thing = things_to_display[selected_index][0]
             selected_thing.set_keep(not selected_thing.get_keep())
         elif key == ord('s'):
             save_selections(root, output_path)
@@ -132,7 +134,7 @@ def save_selections(root: Thing, output_path: str):
 
 
 if __name__ == '__main__':
-    args = parse_arguments()
+    args: argparse.Namespace = parse_arguments()
 
     # Parse extensions
     file_extensions = args.extensions.split(',') if args.extensions else [
