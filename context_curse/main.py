@@ -76,16 +76,24 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
         start_index = max(0, selected_index - page_size // 2)
         end_index = min(num_items, start_index + page_size)
 
+        # Calculate the index offset for the top indicator
+        tool_description_lines = len(tool_description.split('\n'))
+        indicator_line_index = tool_description_lines
+
+        # Add scroll indicators if needed
         if num_items > page_size:
-            # Add scroll indicators if needed
+            # Add "..." at the top if there are items above the visible range
             if start_index > 0:
-                stdscr.addstr(len(tool_description.split('\n')),
-                              0, "...", curses.color_pair(7))
+                stdscr.addstr(indicator_line_index, 0,
+                              "...", curses.color_pair(7))
+            # Add "..." at the bottom if there are items below the visible range
             if end_index < num_items:
                 stdscr.addstr(curses.LINES - 1, 0, "...", curses.color_pair(7))
 
+        # Display the visible items
         for idx, (thing, depth) in enumerate(things_to_display[start_index:end_index]):
-            display_idx = idx + len(tool_description.split('\n'))
+            display_idx = idx + indicator_line_index + \
+                (1 if start_index > 0 else 0)
 
             # Highlight the selected item
             if idx + start_index == selected_index:
