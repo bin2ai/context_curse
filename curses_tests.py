@@ -6,7 +6,7 @@ from thing import Thing
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Thank you for checking out Context Curser...\n a CLI tool for managing files and directories before feeding them into a LLM with a limited context window.")
+        description="Thank you for checking out Context Curse...\n a CLI tool for managing files and directories before feeding them into a LLM with a limited context window.")
     parser.add_argument('-e', '--extensions', type=str,
                         help='Comma-separated extensions to keep (e.g., "py,txt").')
     parser.add_argument('-i', '--input', type=str,
