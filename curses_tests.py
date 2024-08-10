@@ -1,5 +1,6 @@
 import argparse
 import curses
+import os
 from typing import List
 from thing import Thing
 
@@ -18,7 +19,7 @@ def parse_arguments():
 
 def load_input_preferences(input_path: str) -> List[str]:
     '''should be a file with a list of paths to keep, one per line.'''
-    with open(input_path, 'r') as f:
+    with open(input_path, 'r', encoding='utf-8') as f:
         return [line.strip() for line in f.readlines()]
 
 
@@ -141,6 +142,7 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
         elif key == ord('s'):
             if confirm_action("save"):
                 save_selections(root, output_path)
+                generate_massive_file(output_path, output_path.replace(".txt", "_massive.txt"))
         elif key == ord('q') or key == ord('Q'):
             if confirm_action("quit"):
                 break
@@ -159,12 +161,12 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
 def save_selections(root: Thing, output_path: str):
     # Clear the file if root
     if root.get_parent() is None:
-        with open(output_path, 'w') as f:
+        with open(output_path, 'w', encoding='utf-8') as f:
             f.write('')
 
     for i, thing in enumerate(root.get_children()):
         if thing.get_keep():
-            with open(output_path, 'a') as f:
+            with open(output_path, 'a', encoding='utf-8') as f:
                 f.write(f"{thing.get_path()}\n")
         if thing.get_children():
             save_selections(thing, output_path)
@@ -189,6 +191,29 @@ def apply_input_preferences(root: Thing, input_preferences: List[str]):
 
     # Start from the root and update the entire tree
     update_keep_status(root)
+
+def generate_massive_file(input_file_path: str, output_file_path: str):
+    with open(input_file_path, 'r', encoding='utf-8') as input_file, open(output_file_path, 'w', encoding='utf-8') as output_file:
+        # Write a header for the paths list
+        output_file.write("# paths\n")
+        
+        # Read each path from the input file
+        for path in input_file:
+            path = path.strip()  # Remove any leading/trailing whitespace
+            
+            if os.path.isdir(path):
+                # If it's a directory, just comment its path
+                output_file.write(f"# {path}\n")
+            elif os.path.isfile(path):
+                # If it's a file, include its contents
+                output_file.write(f"\n# {path}\n")
+                with open(path, 'r', encoding='utf-8') as content_file:
+                    output_file.write(content_file.read())
+                output_file.write("\n")
+            else:
+                pass
+                # Handle case where the path does not exist
+                #output_file.write(f"# {path} (Path does not exist)\n")
 
 if __name__ == '__main__':
     args: argparse.Namespace = parse_arguments()
