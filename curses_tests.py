@@ -86,20 +86,6 @@ def curses_app(stdscr: 'curses.window', root: Thing):
             save_selections(root)
         elif key == ord('q') or key == ord('Q'):
             break
-        elif key == curses.KEY_RIGHT:
-            selected_thing = things_to_display[selected_index][0]
-            if selected_thing.is_directory() and selected_thing.get_path() not in expanded_dirs:
-                expanded_dirs.add(selected_thing.get_path())
-        elif key == curses.KEY_LEFT:
-            if selected_index > 0:
-                selected_thing = things_to_display[selected_index][0]
-                if selected_thing.get_path() in expanded_dirs:
-                    expanded_dirs.remove(selected_thing.get_path())
-                else:
-                    parent = selected_thing.get_parent()
-                    if parent:
-                        selected_index = things_to_display.index(
-                            (parent, selected_index))
         elif key == ord(' '):  # Space bar toggles expansion/collapse
             selected_thing = things_to_display[selected_index][0]
             if selected_thing.is_directory():
