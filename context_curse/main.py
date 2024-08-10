@@ -25,9 +25,9 @@ def load_input_preferences(input_path: str) -> List[str]:
 
 def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
     curses.curs_set(0)
-    current_thing = root
     selected_index = 0
     expanded_dirs = set()  # Track which directories are expanded
+    page_size = 10
 
     def get_visible_things() -> List[Thing]:
         """Get a list of visible things based on the expanded state."""
@@ -39,7 +39,7 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
                 for child in thing.get_children():
                     add_visible_children(child, depth + 1)
 
-        add_visible_children(current_thing, 0)
+        add_visible_children(root, 0)
         return visible
 
     def render():
@@ -48,7 +48,7 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
         # Add tool description and commands at the top
         tool_description = (
             "#####################\n"
-            "Context Curser - Manage your files and directories before feeding into an LLM\n"
+            "Context Curse - Manage your files and directories before feeding into an LLM\n"
             "  Commands:\n"
             "    ↑/↓: Navigate\n"
             "    Enter: Select/Deselect\n"
@@ -64,18 +64,31 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
             "#####################\n"
         )
 
+        # Draw tool description in cyan/blue
+        stdscr.attron(curses.color_pair(7))  # Cyan/Blue color pair
         stdscr.addstr(0, 0, tool_description)
+        stdscr.attroff(curses.color_pair(7))
 
         things_to_display: List[Thing] = get_visible_things()
+        num_items = len(things_to_display)
 
-        for idx, (thing, depth) in enumerate(things_to_display):
-            thing: Thing
-            depth: int
-            # Offset the index to account for the header lines
+        # Determine the range of items to display
+        start_index = max(0, selected_index - page_size // 2)
+        end_index = min(num_items, start_index + page_size)
+
+        if num_items > page_size:
+            # Add scroll indicators if needed
+            if start_index > 0:
+                stdscr.addstr(len(tool_description.split('\n')),
+                              0, "...", curses.color_pair(7))
+            if end_index < num_items:
+                stdscr.addstr(curses.LINES - 1, 0, "...", curses.color_pair(7))
+
+        for idx, (thing, depth) in enumerate(things_to_display[start_index:end_index]):
             display_idx = idx + len(tool_description.split('\n'))
 
-            # highlight the selected item
-            if idx == selected_index:
+            # Highlight the selected item
+            if idx + start_index == selected_index:
                 mark = ">"
             else:
                 mark = ""
@@ -110,6 +123,8 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
                      curses.COLOR_WHITE)  # Selected, kept
     curses.init_pair(6, curses.COLOR_YELLOW,
                      curses.COLOR_WHITE)  # Selected, mixed
+    # Cyan/Blue for tool_description
+    curses.init_pair(7, curses.COLOR_CYAN, curses.COLOR_BLACK)
 
     def confirm_action(action: str) -> bool:
         stdscr.clear()
@@ -124,6 +139,11 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
 
     while True:
         things_to_display: List[Thing] = get_visible_things()
+        num_items = len(things_to_display)
+        # Ensure start_index and end_index are valid
+        start_index = max(0, selected_index - page_size // 2)
+        end_index = min(num_items, start_index + page_size)
+
         try:
             render()
         except curses.error:
@@ -132,21 +152,31 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
         key = stdscr.getch()
 
         if key == curses.KEY_UP:
-            selected_index = max(0, selected_index - 1)
+            if selected_index > 0:
+                selected_index -= 1
+                if selected_index < start_index:
+                    start_index = max(0, selected_index - page_size // 2)
+                    end_index = min(num_items, start_index + page_size)
         elif key == curses.KEY_DOWN:
-            selected_index = min(len(things_to_display) -
-                                 1, selected_index + 1)
+            if selected_index < len(things_to_display) - 1:
+                selected_index += 1
+                if selected_index >= end_index:
+                    end_index = min(num_items, selected_index + 1)
+                    start_index = max(0, end_index - page_size)
         elif key == curses.KEY_ENTER or key in [10, 13]:
+            # Access Thing object
             selected_thing: Thing = things_to_display[selected_index][0]
             selected_thing.set_keep(not selected_thing.get_keep())
         elif key == ord('s'):
             if confirm_action("save"):
                 save_selections(root, output_path)
-                generate_massive_file(output_path, output_path.replace(".txt", "_massive.txt"))
+                generate_massive_file(
+                    output_path, output_path.replace(".txt", "_massive.txt"))
         elif key == ord('q') or key == ord('Q'):
             if confirm_action("quit"):
                 break
         elif key == ord(' '):  # Space bar toggles expansion/collapse
+            # Access Thing object
             selected_thing = things_to_display[selected_index][0]
             if selected_thing.is_directory():
                 if selected_thing.get_path() in expanded_dirs:
@@ -157,6 +187,7 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
             render()
         except curses.error:
             pass
+
 
 def save_selections(root: Thing, output_path: str):
     # Clear the file if root
@@ -170,6 +201,7 @@ def save_selections(root: Thing, output_path: str):
                 f.write(f"{thing.get_path()}\n")
         if thing.get_children():
             save_selections(thing, output_path)
+
 
 def apply_input_preferences(root: Thing, input_preferences: List[str]):
     """
@@ -192,15 +224,16 @@ def apply_input_preferences(root: Thing, input_preferences: List[str]):
     # Start from the root and update the entire tree
     update_keep_status(root)
 
+
 def generate_massive_file(input_file_path: str, output_file_path: str):
     with open(input_file_path, 'r', encoding='utf-8') as input_file, open(output_file_path, 'w', encoding='utf-8') as output_file:
         # Write a header for the paths list
         output_file.write("# paths\n")
-        
+
         # Read each path from the input file
         for path in input_file:
             path = path.strip()  # Remove any leading/trailing whitespace
-            
+
             if os.path.isdir(path):
                 # If it's a directory, just comment its path
                 output_file.write(f"# {path}\n")
@@ -213,7 +246,8 @@ def generate_massive_file(input_file_path: str, output_file_path: str):
             else:
                 pass
                 # Handle case where the path does not exist
-                #output_file.write(f"# {path} (Path does not exist)\n")
+                # output_file.write(f"# {path} (Path does not exist)\n")
+
 
 def main():
     args: argparse.Namespace = parse_arguments()
