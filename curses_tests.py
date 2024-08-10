@@ -43,11 +43,36 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
 
     def render():
         stdscr.clear()
+
+        # Add tool description and commands at the top
+        tool_description = (
+            "#####################\n"
+            "Context Curser - Manage your files and directories before feeding into an LLM\n"
+            "  Commands:\n"
+            "    ↑/↓: Navigate\n"
+            "    Enter: Select/Deselect\n"
+            "    Space: Expand/Collapse\n"
+            "    s: Save selections\n"
+            "    q: Quit\n"
+            "  Legend:\n"
+            "    >: Selected\n"
+            "    \\: Directory\n"
+            "    Green: Kept\n"
+            "    Yellow: Mixed\n"
+            "    White: Not kept\n"
+            "#####################\n"
+        )
+
+        stdscr.addstr(0, 0, tool_description)
+
         things_to_display: List[Thing] = get_visible_things()
 
         for idx, (thing, depth) in enumerate(things_to_display):
             thing: Thing
             depth: int
+            # Offset the index to account for the header lines
+            display_idx = idx + len(tool_description.split('\n'))
+
             # highlight the selected item
             if idx == selected_index:
                 mark = ">"
@@ -70,7 +95,7 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
             stdscr.attron(color_pair)
             # Add indentation based on the depth
             stdscr.addstr(
-                idx, 0, f"{mark}{'    ' * depth}{thing.get_path()}{suffix}")
+                display_idx, 0, f"{mark}{'    ' * depth}{thing.get_path()}{suffix}")
             stdscr.attroff(color_pair)
 
         stdscr.refresh()
@@ -131,7 +156,7 @@ def save_selections(root: Thing, output_path: str):
                 f.write(f"{thing.get_path()}\n")
         if thing.get_children():
             save_selections(thing, output_path)
-            
+
 def apply_input_preferences(root: Thing, input_preferences: List[str]):
     """
     Apply the input preferences to the Thing tree, setting the keep status
