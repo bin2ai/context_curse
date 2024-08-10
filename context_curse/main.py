@@ -215,7 +215,7 @@ def generate_massive_file(input_file_path: str, output_file_path: str):
                 # Handle case where the path does not exist
                 #output_file.write(f"# {path} (Path does not exist)\n")
 
-if __name__ == '__main__':
+def main():
     args: argparse.Namespace = parse_arguments()
 
     # Parse extensions
