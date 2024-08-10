@@ -32,15 +32,19 @@ class Thing:
         self.__parent: Thing = parent
         self.__children: List[Thing] = []
         self.__selected: bool = False
-        self.__hidden: bool = False
         self.__keep: bool = False
 
         if self.is_directory():
             self.__type = ThingType.DIRECTORY
             for child_path in get_paths(self.__path, file_types, ignore):
-                self.__children.append(Thing(child_path, self))
+                self.__children.append(
+                    Thing(child_path, self, file_types, ignore))
         else:
             self.__type = ThingType.FILE
+            if os.path.splitext(self.__path)[-1].lstrip('.') in file_types or file_types == ['']:
+                self.__hidden: bool = False
+            else:
+                self.__hidden: bool = True
 
     def get_path(self) -> str:
         return self.__path
@@ -109,7 +113,7 @@ class Thing:
         self.__keep = keep
         self.__set_keep_update_children(keep)
         self.__check_and_update_parent()
-
+        
     def is_directory(self) -> bool:
         return os.path.isdir(self.__path)
 

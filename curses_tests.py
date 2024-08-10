@@ -1,8 +1,7 @@
 import argparse
 import curses
-import json
 from typing import List
-from thing import Thing, ThingType
+from thing import Thing
 
 
 def parse_arguments():
@@ -11,16 +10,16 @@ def parse_arguments():
     parser.add_argument('-e', '--extensions', type=str,
                         help='Comma-separated extensions to keep (e.g., "py,txt").')
     parser.add_argument('-i', '--input', type=str,
-                        help='Path to JSON file with input preferences.')
+                        help='Path to text file with input preferences.')
     parser.add_argument('-o', '--output', type=str,
-                        help='Path to output JSON file for saving selections.')
+                        help='Path to output text file for saving selections.')
     return parser.parse_args()
 
 
-def load_input_preferences(input_path: str) -> dict:
-    """Load input preferences from a JSON file."""
+def load_input_preferences(input_path: str) -> List[str]:
+    '''should be a file with a list of paths to keep, one per line.'''
     with open(input_path, 'r') as f:
-        return json.load(f)
+        return [line.strip() for line in f.readlines()]
 
 
 def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
@@ -121,33 +120,55 @@ def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
 
 
 def save_selections(root: Thing, output_path: str):
-    def serialize(thing: Thing):
-        return {
-            'path': thing.get_path(),
-            'type': 'directory' if thing.get_type() == ThingType.DIRECTORY else 'file',
-            'selected': thing.get_selected(),
-            'children': [serialize(child) for child in thing.get_children()] if thing.get_children() else None
-        }
+    # Clear the file if root
+    if root.get_parent() is None:
+        with open(output_path, 'w') as f:
+            f.write('')
 
-    with open(output_path, 'w') as f:
-        json.dump(serialize(root), f, indent=4)
+    for i, thing in enumerate(root.get_children()):
+        if thing.get_keep():
+            with open(output_path, 'a') as f:
+                f.write(f"{thing.get_path()}\n")
+        if thing.get_children():
+            save_selections(thing, output_path)
+            
+def apply_input_preferences(root: Thing, input_preferences: List[str]):
+    """
+    Apply the input preferences to the Thing tree, setting the keep status
+    based on whether the path is in the input preferences.
+    """
 
+    def update_keep_status(thing: Thing):
+        # Set keep status based on whether this thing's path is in input_preferences
+        path = thing.get_path()
+        if path in input_preferences:
+            thing.set_keep(True)
+        else:
+            thing.set_keep(False)
+
+        # Recursively update children
+        for child in thing.get_children():
+            update_keep_status(child)
+
+    # Start from the root and update the entire tree
+    update_keep_status(root)
 
 if __name__ == '__main__':
     args: argparse.Namespace = parse_arguments()
 
     # Parse extensions
-    file_extensions = args.extensions.split(',') if args.extensions else [
-        'py']  # Default to .py files
+    file_ext = args.extensions.split(',') if args.extensions else []
 
-    # Load input preferences if provided
-    input_preferences = {}
     if args.input:
         input_preferences = load_input_preferences(args.input)
+    else:
+        input_preferences = []
 
-    # Start from the root path provided in input or current directory
-    root_path = input_preferences.get('root_path', ".")
-    root_thing = Thing(root_path, file_types=file_extensions)
+    root_thing = Thing('.', file_types=file_ext, ignore=[])
 
-    curses.wrapper(curses_app, root_thing,
-                   args.output if args.output else 'selections.json')
+    # Apply input preferences before starting the curses app
+    apply_input_preferences(root_thing, input_preferences)
+
+    output_path = args.output if args.output else 'context_curse.txt'
+
+    curses.wrapper(curses_app, root_thing, output_path)
