@@ -1,10 +1,29 @@
+import argparse
 import curses
 import json
 from typing import List
 from thing import Thing, ThingType
 
 
-def curses_app(stdscr: 'curses.window', root: Thing):
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Thank you for checking out Context Curser...\n a CLI tool for managing files and directories before feeding them into a LLM with a limited context window.")
+    parser.add_argument('-e', '--extensions', type=str,
+                        help='Comma-separated extensions to keep (e.g., "py,txt").')
+    parser.add_argument('-i', '--input', type=str,
+                        help='Path to JSON file with input preferences.')
+    parser.add_argument('-o', '--output', type=str,
+                        help='Path to output JSON file for saving selections.')
+    return parser.parse_args()
+
+
+def load_input_preferences(input_path: str) -> dict:
+    """Load input preferences from a JSON file."""
+    with open(input_path, 'r') as f:
+        return json.load(f)
+
+
+def curses_app(stdscr: 'curses.window', root: Thing, output_path: str):
     curses.curs_set(0)
     current_thing = root
     selected_index = 0
@@ -83,7 +102,7 @@ def curses_app(stdscr: 'curses.window', root: Thing):
             selected_thing = things_to_display[selected_index][0]
             selected_thing.set_keep(not selected_thing.get_keep())
         elif key == ord('s'):
-            save_selections(root)
+            save_selections(root, output_path)
         elif key == ord('q') or key == ord('Q'):
             break
         elif key == ord(' '):  # Space bar toggles expansion/collapse
@@ -99,7 +118,7 @@ def curses_app(stdscr: 'curses.window', root: Thing):
             pass
 
 
-def save_selections(root: Thing):
+def save_selections(root: Thing, output_path: str):
     def serialize(thing: Thing):
         return {
             'path': thing.get_path(),
@@ -108,11 +127,25 @@ def save_selections(root: Thing):
             'children': [serialize(child) for child in thing.get_children()] if thing.get_children() else None
         }
 
-    with open('selections.json', 'w') as f:
+    with open(output_path, 'w') as f:
         json.dump(serialize(root), f, indent=4)
 
 
 if __name__ == '__main__':
-    root_path = "."  # Starting from the current directory
-    root_thing = Thing(root_path, file_types=['py'])
-    curses.wrapper(curses_app, root_thing)
+    args = parse_arguments()
+
+    # Parse extensions
+    file_extensions = args.extensions.split(',') if args.extensions else [
+        'py']  # Default to .py files
+
+    # Load input preferences if provided
+    input_preferences = {}
+    if args.input:
+        input_preferences = load_input_preferences(args.input)
+
+    # Start from the root path provided in input or current directory
+    root_path = input_preferences.get('root_path', ".")
+    root_thing = Thing(root_path, file_types=file_extensions)
+
+    curses.wrapper(curses_app, root_thing,
+                   args.output if args.output else 'selections.json')
