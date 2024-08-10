@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='context_curse',
-    version='0.0.1',
+    version='0.0.2',
     description='A CLI tool for managing files and directories before feeding them into an LLM.',
     packages=find_packages(),
     entry_points={
@@ -10,7 +10,7 @@ setup(
             'context_curse=context_curse.main:main',
         ],
     },
-    
+
     python_requires='>=3.6',
     install_requires=[
         'windows-curses;platform_system=="Windows"',
