@@ -2,7 +2,7 @@ import argparse
 import curses
 import os
 from typing import List
-from thing import Thing
+from context_curse.thing import Thing
 
 
 def parse_arguments():
