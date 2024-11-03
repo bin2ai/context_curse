@@ -2,12 +2,12 @@ from setuptools import setup, find_packages
 
 setup(
     name='context_curse',
-    version='0.0.2',
+    version='0.0.3',
     description='A CLI tool for managing files and directories before feeding them into an LLM.',
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'context_curse=context_curse.main:main',
+            'context_curse=context_curse.__main__:main',
         ],
     },
 
