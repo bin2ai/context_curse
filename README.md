@@ -23,7 +23,7 @@ pip install context-curse
 After installation, you can run the context_curse command from your terminal. The available options are:
 
 ```bash
-context_curse -h
+python -m context_curse -h
 ```
 
 ## Options
@@ -42,7 +42,7 @@ context_curse -h
 To run Context Curse with a specific configuration, use the following command:
 
 ```bash
-context_curse -e "py,txt" -i "preferences.txt" -o "preferences.txt"
+python -m context_curse -e "py,txt" -i "preferences.txt" -o "preferences.txt"
 ```
 
 the code above takes in the 'preferences.txt' file, which contains a list of paths to keep, and saves the selected paths to the same file.
