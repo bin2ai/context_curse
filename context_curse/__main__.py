@@ -276,3 +276,6 @@ def main():
     output_path = args.output if args.output else 'context_curse.txt'
 
     curses.wrapper(curses_app, root_thing, output_path)
+
+if __name__ == "__main__":
+    main()
